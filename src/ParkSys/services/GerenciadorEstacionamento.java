@@ -27,6 +27,19 @@ public class GerenciadorEstacionamento {
     public void adicionarRegistro(Registro registro) {
         registros.add(registro);
     }
+    
+    public void adicionarFilaEspera(String placa) {
+        filaEspera.add(placa);
+    }
+
+    public String removerFilaEspera() {
+
+        if (filaEspera.isEmpty()) {
+            return null;
+        }
+
+        return filaEspera.removeFirst();
+    }
 
     public HashMap<String, Vaga> getVagas() {
         return vagas;
