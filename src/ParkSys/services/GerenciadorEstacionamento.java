@@ -23,6 +23,10 @@ public class GerenciadorEstacionamento {
 
         filaEspera = new LinkedList<>();
     }
+    
+    public void adicionarRegistro(Registro registro) {
+        registros.add(registro);
+    }
 
     public HashMap<String, Vaga> getVagas() {
         return vagas;
