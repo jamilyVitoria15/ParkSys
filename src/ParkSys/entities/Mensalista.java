@@ -53,6 +53,11 @@ public class Mensalista implements Serializable {
         this.valorMensalidade = valorMensalidade;
     }
 
+ 
+    public boolean possuiVeiculo() {
+        return placa != null && !placa.isBlank();
+    }
+
     @Override
     public String toString() {
         return "Mensalista{" +
