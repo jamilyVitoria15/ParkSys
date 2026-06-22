@@ -1,30 +1,29 @@
 package ParkSys.entities;
 
 import java.io.Serializable;
-
 import ParkSys.enums.StatusVaga;
 
 public class Vaga implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    private int numero;
+    private String id; // Alterado para String para suportar o formato "A01"
     private StatusVaga status;
 
     public Vaga() {
     }
 
-    public Vaga(int numero, StatusVaga status) {
-        this.numero = numero;
+    public Vaga(String id, StatusVaga status) {
+        this.id = id;
         this.status = status;
     }
 
-    public int getNumero() {
-        return numero;
+    public String getId() {
+        return id;
     }
 
-    public void setNumero(int numero) {
-        this.numero = numero;
+    public void setId(String id) {
+        this.id = id;
     }
 
     public StatusVaga getStatus() {
@@ -42,7 +41,7 @@ public class Vaga implements Serializable {
     @Override
     public String toString() {
         return "Vaga{" +
-                "numero=" + numero +
+                "id='" + id + '\'' +
                 ", status=" + status +
                 '}';
     }
