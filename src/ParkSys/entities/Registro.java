@@ -3,7 +3,7 @@ package ParkSys.entities;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
-public class Registro implements Serializable {
+public class Registro implements Serializable, Comparable<Registro> { // Adicionado Comparable (C05)
 
     private static final long serialVersionUID = 1L;
 
@@ -13,7 +13,7 @@ public class Registro implements Serializable {
     private LocalDateTime dataSaida;
     private double valorPago;
 
-    //(M04 e M07)
+    // (M04 e M07)
     private transient String threadOrigem;
 
     public Registro() {
@@ -23,6 +23,15 @@ public class Registro implements Serializable {
         this.veiculo = veiculo;
         this.vaga = vaga;
         this.dataEntrada = LocalDateTime.now();
+    }
+
+    // Implementacao obrigatoria do Requisito C05 para ordenacao cronologica
+    @Override
+    public int compareTo(Registro outro) {
+        if (this.dataEntrada == null || outro.dataEntrada == null) {
+            return 0;
+        }
+        return this.dataEntrada.compareTo(outro.dataEntrada);
     }
 
     public Veiculo getVeiculo() {
@@ -77,7 +86,7 @@ public class Registro implements Serializable {
     public String toString() {
         return "Registro{" +
                 "veiculo=" + veiculo +
-                ", vaga=" + vaga +
+                ", vaga=" + (vaga != null ? vaga.getId() : "null") +
                 ", dataEntrada=" + dataEntrada +
                 ", dataSaida=" + dataSaida +
                 ", valorPago=" + valorPago +
