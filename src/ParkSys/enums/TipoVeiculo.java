@@ -28,4 +28,9 @@ public enum TipoVeiculo {
     public int getVagasOcupadas() {
         return vagasOcupadas;
     }
+
+    @Override
+    public String toString() {
+        return this.descricao;
+    }
 }
