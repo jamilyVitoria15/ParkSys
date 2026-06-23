@@ -8,7 +8,7 @@ import ParkSys.enums.TipoVeiculo;
 import ParkSys.exceptions.VagaOcupadaException;
 import ParkSys.services.GerenciadorEstacionamento;
 
-public class Main {
+public class Principal {
 
     public static void main(String[] args) {
         // Obtém a instância única do Gerenciador (Singleton)
