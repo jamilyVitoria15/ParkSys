@@ -170,6 +170,15 @@ public class GerenciadorEstacionamento {
     private void notificarObservers(String idVaga, boolean estaDisponivel) {
         for (EstacionamentoObserver obs : observers) { obs.atualizarVaga(idVaga, estaDisponivel); }
     }
+    
+    public synchronized void adicionarMensalista(Mensalista mensalista) {
+        if (this.mensalistas == null) {
+            this.mensalistas = new LinkedList<>();
+        }
+        this.mensalistas.add(mensalista);
+        System.out.println("👤 [" + Thread.currentThread().getName() + "] Mensalista '" 
+                + mensalista.getNome() + "' cadastrado com sucesso na LinkedList.");
+    }
 
     // Retorna a coleção de valores do HashMap para uso do Menu/Relatórios
     public List<Vaga> getVagas() {
