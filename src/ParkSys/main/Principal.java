@@ -54,5 +54,10 @@ public class Principal {
         System.out.println("         FIM DA SIMULAÇÃO DO PARKSYS               ");
         System.out.println("===================================================");
         System.exit(0);
+        
+        ParkSys.ui.MenuEstacionamento menu = new ParkSys.ui.MenuEstacionamento();
+        menu.exibirMenu();
     }
+    
+    
 }
