@@ -1,15 +1,15 @@
 package ParkSys.enums;
 
 public enum StatusVaga {
-
-    LIVRE("Livre", true),
-    OCUPADA("Ocupada", false),
-    RESERVADA("Reservada", false);
+    // T02: Constantes com descrição textual e indicador de disponibilidade
+    LIVRE("Vaga Disponível", true),
+    OCUPADA("Vaga Ocupada", false),
+    RESERVADA("Vaga Reservada para Mensalista", false);
 
     private final String descricao;
     private final boolean disponivel;
 
-    StatusVaga(String descricao, boolean disponivel) {
+    private StatusVaga(String descricao, boolean disponivel) {
         this.descricao = descricao;
         this.disponivel = disponivel;
     }

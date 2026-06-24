@@ -1,24 +1,23 @@
 package ParkSys.enums;
 
 public enum TipoVeiculo {
+    MOTO("Motocicleta", 5.00, 1),
+    CARRO("Automóvel", 10.00, 1),
+    SUV("Caminhonete / SUV", 18.00, 2),
+    CAMINHAO("Caminhão", 30.00, 3);
 
-    MOTO("Motocicleta", 5.0, 1),
-    CARRO("Automóvel", 10.0, 1),
-    SUV("SUV", 18.0, 2),
-    CAMINHAO("Caminhão", 30.0, 3);
-
-    private final String descricao;
+    private final String nomeLegivel;
     private final double tarifaHora;
     private final int vagasOcupadas;
 
-    TipoVeiculo(String descricao, double tarifaHora, int vagasOcupadas) {
-        this.descricao = descricao;
+    private TipoVeiculo(String nomeLegivel, double tarifaHora, int vagasOcupadas) {
+        this.nomeLegivel = nomeLegivel;
         this.tarifaHora = tarifaHora;
         this.vagasOcupadas = vagasOcupadas;
     }
 
-    public String getDescricao() {
-        return descricao;
+    public String getNomeLegivel() {
+        return nomeLegivel;
     }
 
     public double getTarifaHora() {
@@ -27,10 +26,5 @@ public enum TipoVeiculo {
 
     public int getVagasOcupadas() {
         return vagasOcupadas;
-    }
-
-    @Override
-    public String toString() {
-        return this.descricao;
     }
 }
