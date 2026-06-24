@@ -62,32 +62,38 @@ public class GerenciadorEstacionamento {
         int numeroInicial;
         
         try {
-            numeroInicial = Integer.parseInt(idVagaInicial.substring(1)); // Pega o número (ex: 1)
+            numeroInicial = Integer.parseInt(idVagaInicial.substring(1)); // Pega o número
         } catch (NumberFormatException e) {
-            System.out.println("⚠️ ID de vaga inválido: " + idVagaInicial);
-            return;
+            throw new VagaOcupadaException("ID de vaga inválido: " + idVagaInicial);
         }
 
-        // T03 e T04: Descobre quantas vagas consecutivas o TipoVeiculo necessita
         int vagasNecessarias = veiculo.getTipo().getVagasOcupadas();
         List<Vaga> vagasParaBloquear = new ArrayList<>();
 
         // 1. Validar e coletar se todas as vagas consecutivas necessárias estão livres
         for (int i = 0; i < vagasNecessarias; i++) {
             int numeroVagaAtual = numeroInicial + i;
-            // Formata o ID garantindo o padrão de nomenclatura (ex: "A1", "A2" ou "A01", "A02")
-            // Se o seu sistema usa "A1", mude para: prefixo + numeroVagaAtual
-            String idVagaAtual = prefixo + (numeroVagaAtual < 10 ? "0" + numeroVagaAtual : numeroVagaAtual);
             
-            // Se a vaga atual não existir no HashMap, cancela a operação (C01)
-            if (!vagas.containsKey(idVagaAtual)) {
-                throw new VagaOcupadaException("Espaço insuficiente! O veículo precisa de " + vagasNecessarias 
-                        + " vagas consecutivas, mas a vaga " + idVagaAtual + " não existe.");
+            // Testa os dois formatos comuns: "A1" e "A01" para garantir compatibilidade
+            String idFormatoCurto = prefixo + numeroVagaAtual;
+            String idFormatoLongo = prefixo + (numeroVagaAtual < 10 ? "0" + numeroVagaAtual : numeroVagaAtual);
+            
+            String idVagaAtual = null;
+            if (vagas.containsKey(idFormatoCurto)) {
+                idVagaAtual = idFormatoCurto;
+            } else if (vagas.containsKey(idFormatoLongo)) {
+                idVagaAtual = idFormatoLongo;
+            }
+
+            // Se a vaga sequencial não existir em nenhum formato no HashMap, lança o erro (C01)
+            if (idVagaAtual == null) {
+                throw new VagaOcupadaException("Espaço insuficiente ou vaga inexistente! O veículo precisa de " 
+                        + vagasNecessarias + " vaga(s) consecutiva(s), mas a sequência a partir de " 
+                        + idVagaInicial + " falhou na posição: " + idFormatoCurto);
             }
 
             Vaga vaga = vagas.get(idVagaAtual);
             
-            // Verifica a disponibilidade usando a flag do status (T02)
             if (!vaga.getStatus().isDisponivel()) {
                 throw new VagaOcupadaException("Bloqueio: A vaga sequencial " + idVagaAtual + " não está disponível!");
             }
@@ -95,26 +101,22 @@ public class GerenciadorEstacionamento {
             vagasParaBloquear.add(vaga);
         }
 
-        // 2. Se passou em todas as validações, altera o status de todas elas para OCUPADA
+        // 2. Altera o status de todas as vagas validadas para OCUPADA
         for (Vaga vaga : vagasParaBloquear) {
             vaga.setStatus(StatusVaga.OCUPADA);
         }
 
         // 3. Cria o registro vinculado à vaga inicial escolhida
         Registro novoRegistro = new Registro(veiculo, vagasParaBloquear.get(0));
-        
-        // M04: Grava o nome da Thread atual no campo transient do Registro para auditoria
         novoRegistro.setThreadOrigem(Thread.currentThread().getName());
-        
-        // C02: Adiciona ao ArrayList de registros ativos
         registrosAtivos.add(novoRegistro);
         
         System.out.println("🚗 [" + Thread.currentThread().getName() + "] Veículo [" + veiculo.getPlaca() 
-                + " (" + veiculo.getTipo().getNomeLegivel() + ")] entrou com sucesso ocupando " 
-                + vagasNecessarias + " vaga(s) a partir da [" + idVagaInicial + "].");
+                + "] entrou ocupando " + vagasNecessarias + " vaga(s) a partir de [" + idVagaInicial + "].");
 
-        // Notifica o painel sobre a alteração da vaga principal (P03)
+        // Notifica a TelaInicial via Observer
         notificarObservers(idVagaInicial, false);
+
     }
     public synchronized void registrarSaida(String placa) throws VeiculoNaoEncontradoException {
         Registro registroEncontrado = null;
@@ -174,16 +176,34 @@ public class GerenciadorEstacionamento {
         return new ArrayList<>(vagas.values());
     }
     
- // Métodos pontes para a persistência de arquivos (S02 e S03)
+ // S03 & S06: Carrega os dados ou inicializa o mapa padrão de 30 vagas caso esteja vazio
     public void carregarDadosDoDisco() {
         GerenciadorArquivo ga = new GerenciadorArquivo();
         DadosParkSys dadosLidos = ga.desserializar("estacionamento.ser");
         
-        if (dadosLidos != null) {
+        if (dadosLidos != null && dadosLidos.getVagas() != null && !dadosLidos.getVagas().isEmpty()) {
             this.vagas = dadosLidos.getVagas();
             this.registrosAtivos = dadosLidos.getRegistros();
             this.mensalistas = dadosLidos.getMensalistas();
             System.out.println("✨ Dados anteriores restaurados com sucesso do disco.");
+        } else {
+            // Se o arquivo não existir ou o mapa estiver vazio, popula as 30 vagas oficiais do projeto
+            System.out.println("🏭 Inicializando a infraestrutura padrão de 30 vagas (Fileiras A e B)...");
+            inicializarVagasPadrao();
+        }
+    }
+
+    // Cria a estrutura padrão exigida no PDF: 30 vagas distribuídas entre as fileiras A e B (01 a 15)
+    private void inicializarVagasPadrao() {
+        this.vagas.clear();
+        String[] fileiras = {"A", "B"};
+        
+        for (String fileira : fileiras) {
+            for (int i = 1; i <= 15; i++) {
+                // Formata com dois dígitos para manter a consistência visual (ex: "A01", "B15")
+                String idVaga = fileira + (i < 10 ? "0" + i : i);
+                this.vagas.put(idVaga, new Vaga(idVaga, StatusVaga.LIVRE));
+            }
         }
     }
 
