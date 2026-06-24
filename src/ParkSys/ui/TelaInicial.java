@@ -18,10 +18,13 @@ import javax.swing.JTextArea;
 import ParkSys.entities.Vaga;
 import ParkSys.observer.EstacionamentoObserver;
 import ParkSys.services.GerenciadorEstacionamento;
+import ParkSys.services.EntradaRunnable;
+
 
 // P04 e P05: TelaInicial implementando a visualização gráfica e o padrão Observer
 public class TelaInicial extends JFrame implements EstacionamentoObserver {
     
+	private Thread threadSimulacao;
     private GerenciadorEstacionamento gerenciador;
     private JTextArea txtMonitorVagas;
 
@@ -79,11 +82,17 @@ public class TelaInicial extends JFrame implements EstacionamentoObserver {
                 // S06: Ao iniciar a aplicação, desserializa os dados automaticamente
                 gerenciador.carregarDadosDoDisco();
                 atualizarPainelTexto();
+
+                // =============================================================
+                // REQUISITO M02 e M06: Disparar thread em background na abertura
+                // =============================================================
+                threadSimulacao = new Thread(new EntradaRunnable(), "ThreadSimulador-ParkSys");
+                threadSimulacao.setPriority(Thread.MIN_PRIORITY); // M06: Prioridade customizada de CPU
+                threadSimulacao.start();
             }
 
             @Override
             public void windowClosing(WindowEvent e) {
-                // S06 & P06: Ao fechar, salva os dados automaticamente e remove o observador
                 int confirmacao = JOptionPane.showConfirmDialog(
                         TelaInicial.this,
                         "Deseja salvar as alterações e fechar o sistema?",
@@ -91,8 +100,15 @@ public class TelaInicial extends JFrame implements EstacionamentoObserver {
                         JOptionPane.YES_NO_OPTION
                 );
                 if (confirmacao == JOptionPane.YES_OPTION) {
+                    // =============================================================
+                    // REQUISITO M05: Interromper a thread em execução com segurança
+                    // =============================================================
+                    if (threadSimulacao != null && threadSimulacao.isAlive()) {
+                        threadSimulacao.interrupt();
+                    }
+
                     gerenciador.salvarDadosNoDisco();
-                    gerenciador.removerObserver(TelaInicial.this); // P06
+                    gerenciador.removerObserver(TelaInicial.this); 
                     System.exit(0);
                 }
             }
