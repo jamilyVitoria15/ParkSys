@@ -1,106 +1,106 @@
 package ParkSys.services;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import ParkSys.entities.Registro;
 import ParkSys.entities.Vaga;
 import ParkSys.entities.Veiculo;
-import ParkSys.enums.StatusVaga;
+import ParkSys.entities.Registro;
+import ParkSys.enums.StatusVaga; // Importado para gerenciar os estados
 import ParkSys.exceptions.VagaOcupadaException;
 import ParkSys.exceptions.VeiculoNaoEncontradoException;
+import ParkSys.observer.EstacionamentoObserver;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 public class GerenciadorEstacionamento {
 
-    // Aplicando o Padrao Singleton
-    private static GerenciadorEstacionamento instancia;
+    private List<Vaga> vagas = new ArrayList<>();
+    private List<Registro> registrosAtivos = new ArrayList<>();
+    
+    // Lista de observers conectados
+    private List<EstacionamentoObserver> observers = new ArrayList<>();
 
-    private Map<String, Vaga> vagas;
-    private List<Registro> registros;
+    public GerenciadorEstacionamento() {}
 
-    // Construtor privado para garantir o Singleton
-    private GerenciadorEstacionamento() {
-        vagas = new HashMap<>();
-        registros = new ArrayList<>();
-        inicializarVagas();
+    public void adicionarVaga(Vaga vaga) {
+        this.vagas.add(vaga);
     }
 
-    // Metodo de acesso do Singleton
-    public static synchronized GerenciadorEstacionamento getInstancia() {
-        if (instancia == null) {
-            instancia = new GerenciadorEstacionamento();
+    // =========================================================================
+    // MÉTODOS DO PADRÃO OBSERVER
+    // =========================================================================
+    
+    public void registrarObserver(EstacionamentoObserver observer) {
+        this.observers.add(observer);
+    }
+
+    public void removerObserver(EstacionamentoObserver observer) {
+        this.observers.remove(observer);
+    }
+
+    private void notificarObservers(String idVaga, boolean estaDisponivel) {
+        for (EstacionamentoObserver observer : observers) {
+            observer.atualizarVaga(idVaga, estaDisponivel);
         }
-        return instancia;
     }
 
-    // Cria algumas vagas iniciais para o sistema rodar (Ex: A01 ate A10)
-    private void inicializarVagas() {
-        for (int i = 1; i <= 10; i++) {
-            String idVaga = String.format("A%02d", i);
-            vagas.put(idVaga, new Vaga(idVaga, StatusVaga.LIVRE));
+    // =========================================================================
+    // REGRAS DE NEGÓCIO COM ATUALIZAÇÃO DE STATUS CORRETA
+    // =========================================================================
+
+    public synchronized void registrarEntrada(Veiculo veiculo, String idVaga) throws VagaOcupadaException {
+        for (Vaga vaga : vagas) {
+            if (vaga.getId().equalsIgnoreCase(idVaga)) { // Corrigido para getId()
+                if (!vaga.estaDisponivel()) {           // Corrigido para estaDisponivel()
+                    throw new VagaOcupadaException("A vaga " + idVaga + " já está ocupada!");
+                }
+                
+                // Altera o status usando o seu Enum StatusVaga
+                vaga.setStatus(StatusVaga.OCUPADA);
+                
+                // Cria o registro de entrada
+                Registro novoRegistro = new Registro(veiculo, vaga);
+                registrosAtivos.add(novoRegistro);
+                
+                System.out.println("🚗 Veículo [" + veiculo.getPlaca() + "] entrou na vaga [" + idVaga + "].");
+                
+                // Notifica o painel que a vaga não está mais disponível
+                notificarObservers(idVaga, false);
+                return;
+            }
         }
+        System.out.println("⚠️ Vaga " + idVaga + " não encontrada no sistema.");
     }
 
-    // Registro de Entrada com protecao Thread-Safe (synchronized)
-    public synchronized Registro registrarEntrada(Veiculo veiculo, String idVaga) throws VagaOcupadaException {
-        Vaga vaga = vagas.get(idVaga);
+    public synchronized void registrarSaida(String placa) throws VeiculoNaoEncontradoException {
+        Registro registroEncontrado = null;
         
-        if (vaga == null) {
-            throw new IllegalArgumentException("Vaga " + idVaga + " nao existe no sistema.");
-        }
-
-        if (!vaga.estaDisponivel()) {
-            throw new VagaOcupadaException("A vaga " + idVaga + " ja esta ocupada ou reservada.");
-        }
-
-        // Altera o status da vaga usando o Enum correto
-        vaga.setStatus(StatusVaga.OCUPADA);
-        
-        // Cria o registro de movimentacao cronologica
-        Registro novoRegistro = new Registro(veiculo, vaga);
-        novoRegistro.setThreadOrigem(Thread.currentThread().getName());
-        
-        registros.add(novoRegistro);
-        return novoRegistro;
-    }
-
-    // Registro de Saida com calculo de tarifa baseada no tipo de veiculo
-    public synchronized double registrarSaida(String placa) throws VeiculoNaoEncontradoException {
-        Registro registroAtivo = null;
-
-        // Busca o registro aberto para o veiculo correspondente
-        for (Registro r : registros) {
-            if (r.getVeiculo().getPlaca().equalsIgnoreCase(placa) && r.getDataSaida() == null) {
-                registroAtivo = r;
+        for (Registro r : registrosAtivos) {
+            if (r.getVeiculo().getPlaca().equalsIgnoreCase(placa)) {
+                registroEncontrado = r;
                 break;
             }
         }
-
-        if (registroAtivo == null) {
-            throw new VeiculoNaoEncontradoException("Nenhum veiculo com a placa " + placa + " foi encontrado estacionado.");
-        }
-
-        // Finaliza o registro
-        registroAtivo.setDataSaida(java.time.LocalDateTime.now());
         
-        // Libera a vaga associada
-        Vaga vaga = registroAtivo.getVaga();
-        vaga.setStatus(StatusVaga.LIVRE);
-
-        // Regra de negocio: Tarifa por Hora simplificada para teste (minimo 1 hora)
-        double tarifaHora = registroAtivo.getVeiculo().getTipo().getTarifaHora();
-        registroAtivo.setValorPago(tarifaHora); 
-
-        return tarifaHora;
+        if (registroEncontrado == null) {
+            throw new VeiculoNaoEncontradoException("Veículo com a placa " + placa + " não foi localizado no estacionamento.");
+        }
+        
+        registroEncontrado.setDataSaida(LocalDateTime.now());
+        
+        // Libera a vaga associada mudando o status para LIVRE
+        Vaga vagaLiberada = registroEncontrado.getVaga();
+        vagaLiberada.setStatus(StatusVaga.LIVRE);
+        
+        registrosAtivos.remove(registroEncontrado);
+        
+        System.out.println("💸 Veículo [" + placa + "] liberou a vaga [" + vagaLiberada.getId() + "]."); // Corrigido para getId()
+        
+        // Notifica o painel que a vaga está livre novamente
+        notificarObservers(vagaLiberada.getId(), true);
     }
 
-    public Map<String, Vaga> getVagas() {
+    public List<Vaga> getVagas() {
         return vagas;
-    }
-
-    public List<Registro> getRegistros() {
-        return registros;
     }
 }
