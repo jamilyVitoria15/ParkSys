@@ -3,7 +3,7 @@ package ParkSys.services;
 import ParkSys.entities.Vaga;
 import ParkSys.entities.Veiculo;
 import ParkSys.entities.Registro;
-import ParkSys.enums.StatusVaga; // Importado para gerenciar os estados
+import ParkSys.enums.StatusVaga;
 import ParkSys.exceptions.VagaOcupadaException;
 import ParkSys.exceptions.VeiculoNaoEncontradoException;
 import ParkSys.observer.EstacionamentoObserver;
@@ -14,13 +14,23 @@ import java.util.List;
 
 public class GerenciadorEstacionamento {
 
+    // Instância única do Singleton
+    private static GerenciadorEstacionamento instancia;
+
     private List<Vaga> vagas = new ArrayList<>();
     private List<Registro> registrosAtivos = new ArrayList<>();
-    
-    // Lista de observers conectados
     private List<EstacionamentoObserver> observers = new ArrayList<>();
 
-    public GerenciadorEstacionamento() {}
+    // Construtor privado para garantir o padrão Singleton
+    private GerenciadorEstacionamento() {}
+
+    // Método público para obter a instância única
+    public static synchronized GerenciadorEstacionamento getInstancia() {
+        if (instancia == null) {
+            instancia = new GerenciadorEstacionamento();
+        }
+        return instancia;
+    }
 
     public void adicionarVaga(Vaga vaga) {
         this.vagas.add(vaga);
@@ -45,26 +55,23 @@ public class GerenciadorEstacionamento {
     }
 
     // =========================================================================
-    // REGRAS DE NEGÓCIO COM ATUALIZAÇÃO DE STATUS CORRETA
+    // REGRAS DE NEGÓCIO
     // =========================================================================
 
     public synchronized void registrarEntrada(Veiculo veiculo, String idVaga) throws VagaOcupadaException {
         for (Vaga vaga : vagas) {
-            if (vaga.getId().equalsIgnoreCase(idVaga)) { // Corrigido para getId()
-                if (!vaga.estaDisponivel()) {           // Corrigido para estaDisponivel()
+            if (vaga.getId().equalsIgnoreCase(idVaga)) {
+                if (!vaga.estaDisponivel()) {
                     throw new VagaOcupadaException("A vaga " + idVaga + " já está ocupada!");
                 }
                 
-                // Altera o status usando o seu Enum StatusVaga
                 vaga.setStatus(StatusVaga.OCUPADA);
                 
-                // Cria o registro de entrada
                 Registro novoRegistro = new Registro(veiculo, vaga);
                 registrosAtivos.add(novoRegistro);
                 
                 System.out.println("🚗 Veículo [" + veiculo.getPlaca() + "] entrou na vaga [" + idVaga + "].");
                 
-                // Notifica o painel que a vaga não está mais disponível
                 notificarObservers(idVaga, false);
                 return;
             }
@@ -74,7 +81,6 @@ public class GerenciadorEstacionamento {
 
     public synchronized void registrarSaida(String placa) throws VeiculoNaoEncontradoException {
         Registro registroEncontrado = null;
-        
         for (Registro r : registrosAtivos) {
             if (r.getVeiculo().getPlaca().equalsIgnoreCase(placa)) {
                 registroEncontrado = r;
@@ -83,20 +89,17 @@ public class GerenciadorEstacionamento {
         }
         
         if (registroEncontrado == null) {
-            throw new VeiculoNaoEncontradoException("Veículo com a placa " + placa + " não foi localizado no estacionamento.");
+            throw new VeiculoNaoEncontradoException("Veículo com a placa " + placa + " não foi localizado.");
         }
         
         registroEncontrado.setDataSaida(LocalDateTime.now());
         
-        // Libera a vaga associada mudando o status para LIVRE
         Vaga vagaLiberada = registroEncontrado.getVaga();
         vagaLiberada.setStatus(StatusVaga.LIVRE);
         
         registrosAtivos.remove(registroEncontrado);
+        System.out.println("💸 Veículo [" + placa + "] liberou a vaga [" + vagaLiberada.getId() + "].");
         
-        System.out.println("💸 Veículo [" + placa + "] liberou a vaga [" + vagaLiberada.getId() + "]."); // Corrigido para getId()
-        
-        // Notifica o painel que a vaga está livre novamente
         notificarObservers(vagaLiberada.getId(), true);
     }
 
