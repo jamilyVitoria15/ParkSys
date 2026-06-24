@@ -173,4 +173,27 @@ public class GerenciadorEstacionamento {
     public List<Vaga> getVagas() {
         return new ArrayList<>(vagas.values());
     }
+    
+ // Métodos pontes para a persistência de arquivos (S02 e S03)
+    public void carregarDadosDoDisco() {
+        GerenciadorArquivo ga = new GerenciadorArquivo();
+        DadosParkSys dadosLidos = ga.desserializar("estacionamento.ser");
+        
+        if (dadosLidos != null) {
+            this.vagas = dadosLidos.getVagas();
+            this.registrosAtivos = dadosLidos.getRegistros();
+            this.mensalistas = dadosLidos.getMensalistas();
+            System.out.println("✨ Dados anteriores restaurados com sucesso do disco.");
+        }
+    }
+
+    public void salvarDadosNoDisco() {
+        GerenciadorArquivo ga = new GerenciadorArquivo();
+        ga.serializar(this.vagas, this.registrosAtivos, this.mensalistas, "estacionamento.ser");
+    }
+
+    public void gerarRelatorioTexto() {
+        GerenciadorArquivo ga = new GerenciadorArquivo();
+        ga.exportarRelatorioTxt(this.registrosAtivos, "relatorio_receita.txt");
+    }
 }
